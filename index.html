@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <input type="file" id="upload" />
+    <div id="result"></div>
+    <script>
+        document.getElementById('upload').addEventListener('change', handleFile, false);
+        function handleFile(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(sheet, {defval: ''});
+                analyzeData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        function analyzeData(data) {
+            const filterByField = (field, value) => data.filter(row => row[field] === value);
+
+            // Task 1
+            const femaleIT = filterByField('Department', 'IT').filter(row => row['Gender'] === 'Female').length;
+
+            // Task 2
+            const departmentz = [...new Set(data.map(row => row['Department']))].length;
+
+
+            // Task 3
+            const genderCounts = data.reduce((acc, row) => {
+                acc[row['Gender']] = (acc[row['Gender']] || 0) + 1;
+                return acc;
+            }, {});
+            const malesMoreOrfemales = genderCounts['Female'] > genderCounts['Male'];
+
+            // Task 4
+            const minAge = Math.min(...data.map(row => row['Age']));
+            const youngestEmployees = data.filter(row => row['Age'] === minAge).map(row => row['Full Name']);
+
+            // Task 5
+            const highestSalary = Math.max(...data.map(row => row['Annual Salary']));
+            const dept = data.find(row => row['Annual Salary'] === highestSalary)['Department'];
+
+            // Task 6
+            const firstHire = data.reduce((earliest, row) => new Date(row['Hire Date']) < new Date(earliest['Hire Date']) ? row : earliest);
+            const firstEmployee = firstHire['Full Name'];
+
+            // Task 7
+            const resignedIn2019 = data.filter(row => new Date(row['Exit Date']).getFullYear() === 2019).length;
+
+            // Task 8
+            const lastResignation = data.reduce((latest, row) => new Date(row['Exit Date']) > new Date(latest['Exit Date']) ? row : latest, data[0]);
+            const lastResigned = lastResignation['Full Name'];
+
+            // Task 9
+            const nameCounts = data.reduce((acc, row) => {
+                const firstName = row['Full Name'].split(' ')[0];
+                acc[firstName] = (acc[firstName] || 0) + 1;
+                return acc;
+            }, {});
+            const duplicateNames = Object.entries(nameCounts).filter(([name, count]) => count > 1);
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <p><strong>1) Women in IT:</strong> ${femaleIT}</p>
+                <p><strong>2) Total Departments:</strong> ${departmentz}</p>
+                <p><strong>3) More females than males:</strong> ${malesMoreOrfemales ? 'Yes' : 'No'}</p>
+                <p><strong>4) Youngest Employees:</strong> ${youngestEmployees.join(', ')}</p>
+                <p><strong>5) Highest salary department:</strong> ${dept}</p>
+                <p><strong>6) First employee hired:</strong> ${firstEmployee}</p>
+                <p><strong>7) Resignations in 2019:</strong> ${resignedIn2019}</p>
+                <p><strong>8) Last employee to resign:</strong> ${lastResigned}</p>
+                <p><strong>9) Duplicate names:</strong> ${duplicateNames.map(([name, count]) => `${name}: ${count}`).join(', ')}</p>`;
+        }
+    </script>
+</body>
+</html>
